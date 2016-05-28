@@ -1,3 +1,4 @@
+"""A simple multiplayer black jack server over TCP"""
 import socket
 import threading
 import random
@@ -108,7 +109,7 @@ class CardServer(object):
         
     def check_draw_result(self, client):
         client_entry = self.clients[client]
-        if (client_entry['cur_value'] <= 21): return True
+        if client_entry['cur_value'] <= 21: return True
         for card in client_entry['drawn_cards']:
             if 'ace' in card:
                 client_entry['cur_value'] -= 10
@@ -117,15 +118,17 @@ class CardServer(object):
         return False
         
     def listen(self):
+        """Start listening on the socket and start a thread for every connection"""
         self.sock.listen(5)
         while True:
             client, address = self.sock.accept()
             client.settimeout(300)
             print 'client %s connected on port %s' % address
-            threading.Thread(target = self.listen_to_client, args = (client, address)).start()
+            threading.Thread(target=self.listen_to_client, args=(client, address)).start()
             
         
     def listen_to_client(self, client, address):
+        """Runs in a thread for a given client"""
         while True:
             try:
                 data = client.recv(PACKET_SIZE)
@@ -133,9 +136,9 @@ class CardServer(object):
                     self.handle_client_response(client, data)
                 else:
                     raise Exception('Disconnected')
-            except Exception as e:
-                print '%s - %s' % (address[0], e)
-                if (client in self.clients):
+            except Exception as ex:
+                print '%s - %s' % (address[0], ex)
+                if client in self.clients:
                     del self.clients[client]
                 client.close()
                 return False
@@ -166,7 +169,7 @@ class CardServer(object):
                     self.clients[client]['isReady'] = True
                     if self.all_clients_ready():
                         print self.clients
-                        threading.Thread(target = self.start_game).start()
+                        threading.Thread(target=self.start_game).start()
                     else:
                         client.send('Waiting for other clients to get ready...')
                 else:
@@ -180,13 +183,13 @@ class CardServer(object):
         if data.startswith('IDENTIFY'):
             name = data[9:]
             #TODO: check if name already exists
-            self.clients[client] = {'name': name,
+            self.clients[client] = {
+                'name': name,
                 'isReady': False,
                 'cur_value': 0,
                 'drawn_cards': [],
                 'waiting': False,
-                'has_passed': False
-                }
+                'has_passed': False}
             client.send('Identified as %s' % name)
             return True
         else:
@@ -207,5 +210,5 @@ class CardServer(object):
         sys.exit(0)
         
 if __name__ == "__main__":
-    myServer = CardServer('localhost', 12916)
-    myServer.listen()
+    my_server = CardServer('localhost', 12916)
+    my_server.listen()
