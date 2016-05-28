@@ -10,7 +10,6 @@ class CardClient(object):
         self.sock.connect((self.host, self.port))
     
     def send(self, message):
-        print 'sending %s' % message
         self.sock.sendall(message)
         
     def listen(self):
@@ -18,29 +17,17 @@ class CardClient(object):
         while True:
             data = self.sock.recv(size)
             if not data: break
-            if data.startswith('HEARTBEAT'):
-                self.echoheartbeat(data[10:])
-            else:
-                print 'Received: %s' % data
+            print '< %s' % data
     
-    def echoheartbeat(self, response):
-        self.send('HBRESPONSE %s' % response)
 
 if __name__ == "__main__":
-    myClient = CardClient('localhost', 12915)
+    host = 'localhost'
+    port = 12916
+    myClient = CardClient('localhost', 12916)
+    print 'Connected to %s on port %s' % (host, port)
+    print 'Type "IDENTIFY <name>" to begin:'
     threading.Thread(target = myClient.listen).start()
     while True:
-        message = input("Message: ")
+        message = raw_input("> ")
         myClient.send(message)
         sleep(1)
-# try:
-#    message = 'This is a message'
-#   print 'sending %s' % message
-#   sock.sendall(message)
-    
-#   data = sock.recv(4096)
-#   print 'received %s' % data
-#finally:
-#    sock.shutdown(socket.SHUT_RDWR)
-#    sock.close()
-#   exit
