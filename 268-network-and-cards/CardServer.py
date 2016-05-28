@@ -35,6 +35,7 @@ class CardServer(object):
         self.host = host
         self.port = port 
         self.clients = {}
+        self.card_deck = self.make_card_deck()
         self.has_started = False
         self.player_queue = Queue.Queue()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -76,13 +77,15 @@ class CardServer(object):
             suit = random.choice(list(CARD_SUITS))
             value = random.choice(list(CARD_VALUES))
             card = suit.upper() + ' ' + value.upper()
+            card, value = random.choice(self.card_deck)
+            self.card_deck.remove((card, value))
             print '%s draws %s' % (client_entry['name'], card)
             self.broadcast('%s draws %s' % (client_entry['name'], card))
             sleep(1)
             client.send("Your Card: %s" % card)
             sleep(1)
             client_entry['drawn_cards'].append(card)
-            client_entry['cur_value'] += CARD_VALUES[value]
+            client_entry['cur_value'] += value
             client.send('Cards in your hand: %s' % ', '.join(client_entry['drawn_cards']))
             sleep(1)
             if not self.check_draw_result(client):
@@ -99,6 +102,9 @@ class CardServer(object):
         for client in self.clients.values():    
             if client['has_passed']:
                 candidates.append((client, client['cur_value']))
+        if not candidates:
+            self.broadcast('Nobody has won!')
+            return
         sorted_candidates = sorted(candidates, key=lambda c: c[1], reverse=True)
         if len(sorted_candidates) > 1 and sorted_candidates[0][1] == sorted_candidates[1][1]:
             self.broadcast('We have a tie!')
@@ -116,6 +122,13 @@ class CardServer(object):
                 if client_entry['cur_value'] <= 21:
                     return True 
         return False
+        
+    def make_card_deck(self):
+        card_deck = []
+        for suit in CARD_SUITS:    
+            for value in CARD_VALUES:
+                card_deck.append(('%s of %s' % (value, suit), CARD_VALUES[value]))
+        return card_deck           
         
     def listen(self):
         """Start listening on the socket and start a thread for every connection"""
