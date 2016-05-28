@@ -74,9 +74,6 @@ class CardServer(object):
             sleep(1) 
             
         if not client_entry['has_passed']:
-            suit = random.choice(list(CARD_SUITS))
-            value = random.choice(list(CARD_VALUES))
-            card = suit.upper() + ' ' + value.upper()
             card, value = random.choice(self.card_deck)
             self.card_deck.remove((card, value))
             print '%s draws %s' % (client_entry['name'], card)
