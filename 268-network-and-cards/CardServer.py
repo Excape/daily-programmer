@@ -18,6 +18,7 @@ CARD_VALUES = {
     'seven' : 7,
     'eight' : 8,
     'nine' : 9,
+    'ten' : 10,
     'jack' : 10,
     'queen' : 10,
     'king' : 10,
@@ -89,7 +90,8 @@ class CardServer(object):
                 self.broadcast('%s is over 21! Game Over!' % client_entry['name'])
             else:
                 client.send('Your current value is %s' % client_entry['cur_value'])
-                self.player_queue.put(client)
+                if not client_entry['cur_value'] == 21:
+                    self.player_queue.put(client)
         else:
             self.broadcast('%s has passed!' % client_entry['name'])
         sleep(1)
@@ -112,9 +114,12 @@ class CardServer(object):
         
     def check_draw_result(self, client):
         client_entry = self.clients[client]
+        if client_entry['cur_value'] == 21:
+            client_entry['has_passed'] = True
         if client_entry['cur_value'] <= 21: return True
         for card in client_entry['drawn_cards']:
             if 'ace' in card:
+                #TODO: only decrease value once per ace
                 client_entry['cur_value'] -= 10
                 if client_entry['cur_value'] <= 21:
                     return True 
