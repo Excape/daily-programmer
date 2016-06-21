@@ -10,31 +10,34 @@ from time import sleep
 PACKET_SIZE = 1024
 
 CARD_VALUES = {
-    'two' : 2,
-    'three' : 3,
-    'four' : 4,
-    'five' : 5,
-    'six' : 6,
-    'seven' : 7,
-    'eight' : 8,
-    'nine' : 9,
-    'ten' : 10,
-    'jack' : 10,
-    'queen' : 10,
-    'king' : 10,
-    'ace' : 11 #or 1
+    'two': 2,
+    'three': 3,
+    'four': 4,
+    'five': 5,
+    'six': 6,
+    'seven': 7,
+    'eight': 8,
+    'nine': 9,
+    'ten': 10,
+    'jack': 10,
+    'queen': 10,
+    'king': 10,
+    'ace': 11  # or 1
 }
-    
+
 CARD_SUITS = {
-    'hearts' : 0,
-    'clubs' : 1,
-    'spades' : 2,
-    'diamonds' : 3
+    'hearts': 0,
+    'clubs': 1,
+    'spades': 2,
+    'diamonds': 3
 }
+
+
 class CardServer(object):
+
     def __init__(self, host, port):
         self.host = host
-        self.port = port 
+        self.port = port
         self.clients = {}
         self.card_deck = self.make_card_deck()
         self.has_started = False
@@ -44,36 +47,37 @@ class CardServer(object):
         self.sock.bind((self.host, self.port))
         signal.signal(signal.SIGINT, self.shutdown)
         print "Server started at %s on port %s" % (self.host, self.port)
-        
+
     def start_game(self):
         print 'Participating clients:'
         print self.clients
         self.has_started = True
         self.broadcast("Game begins now!")
         sleep(1)
-        
+
         for client in self.clients:
             self.player_queue.put(client)
-            
+
         while not self.player_queue.empty():
             cur_player = self.player_queue.get()
             self.broadcast('It\'s %s\'s turn!' % self.clients[cur_player]['name'])
             sleep(1)
             self.deal_card(cur_player)
-        
+
         self.determine_winner()
-        #TODO: Error on exit
+        # TODO: Error on exit
         self.shutdown(signal.SIGINT, None)
-        
+
     def deal_card(self, client):
         client_entry = self.clients[client]
-        client.send('Its your turn - TAKE or PASS. Your current cards have a value of %s' % client_entry['cur_value'])
-        
+        client.send('Its your turn - TAKE or PASS. Your current cards have a value of %s' %
+                    client_entry['cur_value'])
+
         # Wait for answer
         client_entry['waiting'] = True
         while client_entry['waiting']:
-            sleep(1) 
-            
+            sleep(1)
+
         if not client_entry['has_passed']:
             card, value = random.choice(self.card_deck)
             self.card_deck.remove((card, value))
@@ -95,10 +99,10 @@ class CardServer(object):
         else:
             self.broadcast('%s has passed!' % client_entry['name'])
         sleep(1)
-        
+
     def determine_winner(self):
         candidates = []
-        for client in self.clients.values():    
+        for client in self.clients.values():
             if client['has_passed']:
                 candidates.append((client, client['cur_value']))
         if not candidates:
@@ -110,28 +114,30 @@ class CardServer(object):
         else:
             winner = sorted_candidates[0]
             print '%s has won!' % winner[0]['name']
-            self.broadcast('Player %s has won with %s!' % (winner[0]['name'], ', '.join(winner[0]['drawn_cards'])))
-        
+            self.broadcast('Player %s has won with %s!' %
+                           (winner[0]['name'], ', '.join(winner[0]['drawn_cards'])))
+
     def check_draw_result(self, client):
         client_entry = self.clients[client]
         if client_entry['cur_value'] == 21:
             client_entry['has_passed'] = True
-        if client_entry['cur_value'] <= 21: return True
+        if client_entry['cur_value'] <= 21:
+            return True
         for card in client_entry['drawn_cards']:
             if 'ace' in card:
-                #TODO: only decrease value once per ace
+                # TODO: only decrease value once per ace
                 client_entry['cur_value'] -= 10
                 if client_entry['cur_value'] <= 21:
-                    return True 
+                    return True
         return False
-        
+
     def make_card_deck(self):
         card_deck = []
-        for suit in CARD_SUITS:    
+        for suit in CARD_SUITS:
             for value in CARD_VALUES:
                 card_deck.append(('%s of %s' % (value, suit), CARD_VALUES[value]))
-        return card_deck           
-        
+        return card_deck
+
     def listen(self):
         """Start listening on the socket and start a thread for every connection"""
         self.sock.listen(5)
@@ -140,8 +146,7 @@ class CardServer(object):
             client.settimeout(300)
             print 'client %s connected on port %s' % address
             threading.Thread(target=self.listen_to_client, args=(client, address)).start()
-            
-        
+
     def listen_to_client(self, client, address):
         """Runs in a thread for a given client"""
         while True:
@@ -157,10 +162,10 @@ class CardServer(object):
                     del self.clients[client]
                 client.close()
                 return False
-                
+
     def handle_client_response(self, client, data):
         print 'received "%s" from %s' % (data, client)
-            
+
         if self.has_started:
             if client not in self.clients:
                 client.send('Game has already started - sorry!')
@@ -189,15 +194,15 @@ class CardServer(object):
                         client.send('Waiting for other clients to get ready...')
                 else:
                     client.send('Send "START" to start the game')
-                        
+
     def broadcast(self, message):
         for client in self.clients:
             client.send(message)
-    
+
     def identify_client(self, client, data):
         if data.startswith('IDENTIFY'):
             name = data[9:]
-            #TODO: check if name already exists
+            # TODO: check if name already exists
             self.clients[client] = {
                 'name': name,
                 'isReady': False,
@@ -210,20 +215,20 @@ class CardServer(object):
         else:
             client.send('Please identify yourself with "IDENTIFY <name>"')
             return False
-            
+
     def all_clients_ready(self):
         # TODO: Doesn't always work correctly
         for client in self.clients.values():
             if not client['isReady']:
                 return False
             return True
-        
+
     def shutdown(self, signal, frame):
         print 'Shutting down...'
         self.sock.shutdown(socket.SHUT_RDWR)
         self.sock.close()
         sys.exit(0)
-        
+
 if __name__ == "__main__":
     my_server = CardServer('localhost', 12916)
     my_server.listen()
