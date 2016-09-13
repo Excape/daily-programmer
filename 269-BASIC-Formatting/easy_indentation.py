@@ -24,7 +24,7 @@ if __name__ == "__main__":
     stack = []
     for line in split_input[2:]:
         line = line.strip('·»')
-        if line.startswith('NEXT'): 
+        if line.startswith('NEXT'):
             if not stack.pop().startswith('FOR'):
                 print('Error on line "' + line + '", no matching FOR')
                 break
@@ -37,6 +37,6 @@ if __name__ == "__main__":
         print(level * indent + line)
         if line.startswith('FOR') or line.startswith('IF'):
             stack.append(line)
-            level += 1 
+            level += 1
     while not len(stack) == 0:
         print('Missing End-Statement for "' + stack.pop() + '"')

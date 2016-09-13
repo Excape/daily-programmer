@@ -182,7 +182,7 @@ class CardServer(object):
             else:
                 client.send('Please type TAKE or PASS')
         else:
-            if not client in self.clients:
+            if client not in self.clients:
                 self.identify_client(client, data)
             else:
                 if data.startswith('START'):
